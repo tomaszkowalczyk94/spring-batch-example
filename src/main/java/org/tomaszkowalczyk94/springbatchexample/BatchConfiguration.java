@@ -1,5 +1,6 @@
 package org.tomaszkowalczyk94.springbatchexample;
 
+import lombok.AllArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
@@ -12,6 +13,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,17 +21,16 @@ import java.util.Arrays;
 
 @Configuration
 @EnableBatchProcessing
+@AllArgsConstructor
 public class BatchConfiguration {
 
-    @Autowired
-    public JobBuilderFactory jobBuilderFactory;
+    private final JobBuilderFactory jobBuilderFactory;
 
-    @Autowired
-    public StepBuilderFactory stepBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
 
     @Bean
     @StepScope
-    public ItemReader<Integer> reader() {
+    public ItemReader<Integer> reader(@Value("#{jobParameters['input.file.name']}") String test) {
         return new ListItemReader<>(Arrays.asList(11, 22, 33));
     }
 
@@ -40,7 +41,10 @@ public class BatchConfiguration {
 
     @Bean
     public ItemWriter<Integer> writer() {
-        return items -> items.forEach(System.out::println);
+        return items -> {
+            System.out.println("WRITER RUN");
+            items.forEach(System.out::println);
+        };
     }
 
     @Bean
@@ -54,10 +58,10 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step step1(ItemWriter<Integer> writer) {
+    public Step step1(ItemWriter<Integer> writer, ItemReader<Integer> reader) {
         return stepBuilderFactory.get("step1")
-                .<Integer, Integer> chunk(10)
-                .reader(reader())
+                .<Integer, Integer> chunk(30)
+                .reader(reader)
                 .processor(processor())
                 .writer(writer)
                 .build();
